@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soso Video Review</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: var(--tg-theme-bg-color, #fff); /* ياخد لون تليجرام */
+            color: var(--tg-theme-text-color, #000);
+            padding: 20px;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        textarea {
+            width: 90%;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            height: 80px;
+        }
+        button {
+            background-color: var(--tg-theme-button-color, #3390ec); /* لون زرار تليجرام */
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <h3>🎬 مراجعة الفيديو</h3>
+    
+    <video controls id="videoPlayer">
+        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+        المتصفح لا يدعم الفيديو.
+    </video>
+
+    <div id="status"></div>
+
+    <textarea id="feedback" placeholder="اكتب ملاحظاتك هنا..."></textarea>
+
+    <button onclick="sendFeedback()">✅ إرسال التعديلات</button>
+
+    <script>
+        // تفعيل الـ Mini App
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // يفتح الشاشة كاملة
+
+        function sendFeedback() {
+            const feedbackText = document.getElementById("feedback").value;
+            if (!feedbackText) {
+                alert("اكتب ملاحظة الأول!");
+                return;
+            }
+
+            // هنا بقى السحر: الموقع بيبعت البيانات للبوت
+            const data = {
+                action: "VIDEO_FEEDBACK",
+                text: feedbackText,
+                timestamp: document.getElementById("videoPlayer").currentTime
+            };
+
+            // إرسال البيانات لتليجرام وقفل التطبيق
+            tg.sendData(JSON.stringify(data)); 
+        }
+    </script>
+</body>
+</html>
