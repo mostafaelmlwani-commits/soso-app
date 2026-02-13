@@ -25,53 +25,43 @@
     <textarea id="feedback" placeholder="اكتب ملاحظاتك هنا..."></textarea>
     <button onclick="sendFeedback()">✅ إرسال التعديلات</button>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand(); 
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand(); 
 
-        // 1️⃣ استخراج البيانات من الرابط
-        const urlParams = new URLSearchParams(window.location.search);
-        const projectId = urlParams.get('projectId');
-        const videoUrl = urlParams.get('video');
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get('projectId');
+    // هنا الميني أب بيلقط رابط الفيديو اللي البوت بعته
+    const videoUrl = urlParams.get('video');
 
-        const videoPlayer = document.getElementById("videoPlayer");
-        const titleElement = document.getElementById("title");
+    const videoPlayer = document.getElementById("videoPlayer");
+    const titleElement = document.getElementById("title");
 
-        // 2️⃣ تشغيل الفيديو
-        if (videoUrl) {
-            videoPlayer.src = decodeURIComponent(videoUrl);
-            titleElement.innerText = `🎬 مراجعة مشروع: ${projectId || ''}`;
-        } else {
-            titleElement.innerText = "⚠️ خطأ: مفيش رابط فيديو!";
-            alert("لم يتم العثور على فيديو للمراجعة.");
-        }
+    if (videoUrl) {
+        // فك التشفير ووضعه في المشغل
+        videoPlayer.src = decodeURIComponent(videoUrl);
+        titleElement.innerText = `🎬 مراجعة مشروع: ${projectId}`;
+    } else {
+        titleElement.innerText = "⚠️ لم يتم استلام رابط الفيديو";
+    }
 
-        // 3️⃣ دالة الإرسال
-        function sendFeedback() {
-            const feedbackText = document.getElementById("feedback").value;
-            if (!feedbackText) {
-                tg.showAlert("من فضلك اكتب ملاحظة الأول!");
-                return;
-            }
+    function sendFeedback() {
+        const feedbackText = document.getElementById("feedback").value;
+        const data = {
+            action: "VIDEO_FEEDBACK",
+            projectId: projectId,
+            text: feedbackText,
+            timestamp: formatTime(videoPlayer.currentTime)
+        };
+        tg.sendData(JSON.stringify(data)); 
+        tg.close();
+    }
 
-            // بيانات التعديل
-            const data = {
-                action: "VIDEO_FEEDBACK",
-                projectId: projectId,
-                text: feedbackText,
-                timestamp: formatTime(videoPlayer.currentTime) // التوقيت
-            };
-
-            // إرسال البيانات للبوت
-            tg.sendData(JSON.stringify(data)); 
-        }
-
-        // تحويل الثواني لتوقيت (01:15)
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            return `${m}:${s < 10 ? '0' : ''}${s}`;
-        }
-    </script>
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+</script>
 </body>
 </html>
