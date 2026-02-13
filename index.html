@@ -6,75 +6,71 @@
     <title>Soso Video Review</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: sans-serif;
-            background-color: var(--tg-theme-bg-color, #fff); /* ياخد لون تليجرام */
-            color: var(--tg-theme-text-color, #000);
-            padding: 20px;
-            text-align: center;
-        }
-        video {
-            width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        textarea {
-            width: 90%;
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            height: 80px;
-        }
-        button {
-            background-color: var(--tg-theme-button-color, #3390ec); /* لون زرار تليجرام */
-            color: var(--tg-theme-button-text-color, #fff);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-top: 15px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-        }
+        body { font-family: sans-serif; background-color: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); padding: 20px; text-align: center; }
+        video { width: 100%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 15px; }
+        textarea { width: 90%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; height: 80px; font-size: 16px;}
+        button { background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #fff); border: none; padding: 12px 20px; border-radius: 8px; margin-top: 15px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
+        .loading { font-size: 18px; color: #666; }
     </style>
 </head>
 <body>
 
-    <h3>🎬 مراجعة الفيديو</h3>
+    <h3 id="title">🎬 جاري تحميل الفيديو...</h3>
     
-    <video controls id="videoPlayer">
-        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+    <video controls id="videoPlayer" playsinline>
+        <source src="" type="video/mp4">
         المتصفح لا يدعم الفيديو.
     </video>
 
-    <div id="status"></div>
-
     <textarea id="feedback" placeholder="اكتب ملاحظاتك هنا..."></textarea>
-
     <button onclick="sendFeedback()">✅ إرسال التعديلات</button>
 
     <script>
-        // تفعيل الـ Mini App
         const tg = window.Telegram.WebApp;
-        tg.expand(); // يفتح الشاشة كاملة
+        tg.expand(); 
 
+        // 1️⃣ استخراج البيانات من الرابط
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('projectId');
+        const videoUrl = urlParams.get('video');
+
+        const videoPlayer = document.getElementById("videoPlayer");
+        const titleElement = document.getElementById("title");
+
+        // 2️⃣ تشغيل الفيديو
+        if (videoUrl) {
+            videoPlayer.src = decodeURIComponent(videoUrl);
+            titleElement.innerText = `🎬 مراجعة مشروع: ${projectId || ''}`;
+        } else {
+            titleElement.innerText = "⚠️ خطأ: مفيش رابط فيديو!";
+            alert("لم يتم العثور على فيديو للمراجعة.");
+        }
+
+        // 3️⃣ دالة الإرسال
         function sendFeedback() {
             const feedbackText = document.getElementById("feedback").value;
             if (!feedbackText) {
-                alert("اكتب ملاحظة الأول!");
+                tg.showAlert("من فضلك اكتب ملاحظة الأول!");
                 return;
             }
 
-            // هنا بقى السحر: الموقع بيبعت البيانات للبوت
+            // بيانات التعديل
             const data = {
                 action: "VIDEO_FEEDBACK",
+                projectId: projectId,
                 text: feedbackText,
-                timestamp: document.getElementById("videoPlayer").currentTime
+                timestamp: formatTime(videoPlayer.currentTime) // التوقيت
             };
 
-            // إرسال البيانات لتليجرام وقفل التطبيق
+            // إرسال البيانات للبوت
             tg.sendData(JSON.stringify(data)); 
+        }
+
+        // تحويل الثواني لتوقيت (01:15)
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
         }
     </script>
 </body>
