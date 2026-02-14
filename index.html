@@ -6,10 +6,42 @@
     <title>Soso Video Review</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); padding: 20px; text-align: center; }
-        video { width: 100%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 15px; }
-        textarea { width: 90%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; height: 80px; font-size: 16px;}
-        button { background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #fff); border: none; padding: 12px 20px; border-radius: 8px; margin-top: 15px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
+        body { 
+            font-family: sans-serif; 
+            background-color: var(--tg-theme-bg-color, #fff); 
+            color: var(--tg-theme-text-color, #000); 
+            padding: 20px; 
+            text-align: center; 
+        }
+        video { 
+            width: 100%; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+            margin-bottom: 15px; 
+            background-color: #000; /* خلفية سوداء أثناء التحميل */
+        }
+        textarea { 
+            width: 90%; 
+            padding: 10px; 
+            border-radius: 8px; 
+            border: 1px solid #ccc; 
+            height: 80px; 
+            font-size: 16px;
+            background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
+        }
+        button { 
+            background-color: var(--tg-theme-button-color, #3390ec); 
+            color: var(--tg-theme-button-text-color, #fff); 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            width: 100%; 
+            font-weight: bold; 
+        }
         .loading { font-size: 18px; color: #666; }
     </style>
 </head>
@@ -17,30 +49,48 @@
 
     <h3 id="title">🎬 جاري تحميل الفيديو...</h3>
     
-    <video controls id="videoPlayer" playsinline>
+    <video 
+        id="videoPlayer" 
+        controls 
+        playsinline 
+        webkit-playsinline 
+        crossorigin="anonymous" 
+        preload="metadata">
         <source src="" type="video/mp4">
-        المتصفح لا يدعم الفيديو.
+        المتصفح لا يدعم تشغيل الفيديو.
     </video>
 
     <textarea id="feedback" placeholder="اكتب ملاحظاتك هنا..."></textarea>
     <button onclick="sendFeedback()">✅ إرسال التعديلات</button>
 
-  <script>
+<script>
     const tg = window.Telegram.WebApp;
     tg.expand(); 
 
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('projectId');
-    // هنا الميني أب بيلقط رابط الفيديو اللي البوت بعته
     const videoUrl = urlParams.get('video');
 
     const videoPlayer = document.getElementById("videoPlayer");
     const titleElement = document.getElementById("title");
 
     if (videoUrl) {
-        // فك التشفير ووضعه في المشغل
-        videoPlayer.src = decodeURIComponent(videoUrl);
+        // 1. فك تشفير الرابط
+        const decodedUrl = decodeURIComponent(videoUrl);
+        
+        // 2. تعيين الرابط للمشغل
+        videoPlayer.src = decodedUrl;
+        
+        // 3. أمر إجباري لإعادة تحميل الفيديو بالهوية الجديدة (CORS)
+        videoPlayer.load(); 
+        
         titleElement.innerText = `🎬 مراجعة مشروع: ${projectId}`;
+        
+        // إضافة مستمع للأخطاء للمساعدة في التشخيص
+        videoPlayer.onerror = function() {
+            console.error("خطأ في تحميل الفيديو:", videoPlayer.error);
+            titleElement.innerText = "❌ فشل تحميل الفيديو (تأكد من إعدادات CORS)";
+        };
     } else {
         titleElement.innerText = "⚠️ لم يتم استلام رابط الفيديو";
     }
@@ -58,6 +108,7 @@
     }
 
     function formatTime(seconds) {
+        if (!seconds) return "0:00";
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s < 10 ? '0' : ''}${s}`;
