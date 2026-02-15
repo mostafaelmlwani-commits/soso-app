@@ -267,25 +267,39 @@
     canvas.addEventListener('touchmove', draw, {passive: false});
     // 5. حفظ التعديل (دمج الصورة + النص)
    // 5. حفظ التعديل (دمج الصورة + النص) - النسخة المدمجة
+   
     function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
         
-        // إنشاء كانفاس مؤقت بحجم الفيديو الأصلي
+        // إنشاء كانفاس مؤقت
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth;
-        tempCanvas.height = video.videoHeight;
+        tempCanvas.width = video.videoWidth || canvas.width; // احتياطي لو الفيديو مش قاري
+        tempCanvas.height = video.videoHeight || canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
         
-        // 1️⃣ رسم فريم الفيديو (الخلفية)
-        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+        let imageData;
 
-        // 2️⃣ رسم الشخبطة فوق الفيديو (الطبقة العلوية)
-        // ⚠️ السر هنا: بنقوله خد رسمة الكانفاس ومطها لتملأ حجم الفيديو
-        tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // تحويل لـ Base64 (صورة)
-        const imageData = tempCanvas.toDataURL('image/jpeg', 0.6); 
+        try {
+            // 1️⃣ محاولة رسم الفيديو (الخطر كله هنا)
+            // لازم السطر ده يكون في try عشان لو CORS ضرب ميموتش التطبيق
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // 2️⃣ رسم الشخبطة فوقه
+            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // محاولة التحويل لصورة
+            imageData = tempCanvas.toDataURL('image/jpeg', 0.6);
+            
+        } catch (e) {
+            console.warn("⚠️ مشكلة CORS في دمج الفيديو، سيتم إرسال الرسم فقط.", e);
+            
+            // خطة بديلة: لو فشل الدمج، ابعت الرسمة بس (خلفية شفافة)
+            // هننظف الكانفاس ونحط الرسمة بس
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            imageData = tempCanvas.toDataURL('image/png'); // PNG عشان الشفافية
+        }
 
         // إضافة للقائمة
         feedbackArray.push({
@@ -299,9 +313,8 @@
         updateFeedbackList();
         
         // مسح الرسمة والعودة
-        cancelEditing(); 
+        cancelEditing();
     }
-    
     }function cancelEditing() {
         isEditing = false;
         canvas.style.pointerEvents = 'none';
