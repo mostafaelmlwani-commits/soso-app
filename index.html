@@ -158,10 +158,13 @@
     let currentColor = '#ff4d4d';
 // 1. تحميل الفيديو
   // 1. تحميل الفيديو بنسخة "فريش"
+// 1. تحميل الفيديو بنسخة "فريش"
     if (videoUrl) {
         video.crossOrigin = "anonymous"; 
-        // بنضيف تايماستامب في آخر الرابط عشان نكسر الكاش
-        const freshUrl = decodeURIComponent(videoUrl) + '?t=' + new Date().getTime();
+        
+        // 👇 التعديل هنا: بنضيف علامة استفهام ورقم عشوائي عشان تليجرام يفتكره فيديو جديد
+        const freshUrl = decodeURIComponent(videoUrl) + '?nocache=' + Math.random();
+        
         video.src = freshUrl;
         video.load();
     }
