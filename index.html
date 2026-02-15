@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>
+        // التنبيه ده هيعرفنا إن النسخة الجديدة وصلت
+        alert("النسخة الجديدة شغال يا هندسة!"); 
+        
+        // تشغيل الكونسول
+        window.vConsole = new window.vConsole();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Soso Studio Review</title>
@@ -144,11 +152,19 @@
     let feedbackArray = [];
     let currentColor = '#ff4d4d';
 
-    // 1. تحميل الفيديو (العودة للأصل البسيط عشان يشتغل)
+// 1. تحميل الفيديو (النسخة اللي هتسمح بالتصوير)
+// 1. تحميل الفيديو (النسخة اللي هتسمح بالتصوير)
     if (videoUrl) {
-        // شيلنا الـ crossOrigin خالص عشان هي اللي كانت بتسود الشاشة
-        video.src = decodeURIComponent(videoUrl);
+        // 1️⃣ التصريح ده هو "المفتاح" اللي بيخلينا ندمج الفيديو مع الرسم
+        video.crossOrigin = "anonymous"; 
+        
+        // 2️⃣ بنزود التوقيت عشان نكسر كاش تليجرام ونخليه يطلب التصريح فريش
+        const finalUrl = decodeURIComponent(videoUrl) + '?cv=' + Date.now();
+        
+        video.src = finalUrl;
         video.load();
+        
+        console.log("🚀 تم تحميل الفيديو بتصريح CORS وكاسر الكاش");
     } else {
         alert("❌ خطأ: رابط الفيديو مش موجود!");
     }
@@ -234,21 +250,32 @@
     canvas.addEventListener('touchmove', draw, {passive: false});
 
     // 5. حفظ التعديل (النسخة اللي مش بتهنج)
-    function saveFeedback() {
+   function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
         
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+        // بنستخدم أبعاد الفيديو الحقيقية عشان الصورة تطلع واضحة
+        tempCanvas.width = video.videoWidth || canvas.width;
+        tempCanvas.height = video.videoHeight || canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
         
-        // هنرسم الرسمة بس على خلفية سوداء عشان الفيديو ميسودش
-        tempCtx.fillStyle = "black";
-        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.drawImage(canvas, 0, 0);
-        
-        const imageData = tempCanvas.toDataURL('image/jpeg', 0.6);
+        try {
+            // 1️⃣ رسم فريم الفيديو (الخلفية)
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // 2️⃣ رسم الشخبطة فوقه
+            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
+        } catch (e) {
+            console.error("CORS Error: المتصفح رفض دمج الفيديو");
+            // لو فشل، يرجع للخطة البديلة (خلفية سوداء + الرسمة) عشان التطبيق ما يقفش
+            tempCtx.fillStyle = "black";
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+            imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
+        }
 
         feedbackArray.push({
             time: timestamp,
