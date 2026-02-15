@@ -266,23 +266,26 @@
     canvas.addEventListener('touchend', endPosition);
     canvas.addEventListener('touchmove', draw, {passive: false});
     // 5. حفظ التعديل (دمج الصورة + النص)
+   // 5. حفظ التعديل (دمج الصورة + النص) - النسخة المدمجة
     function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
         
-        // خدعة: دمج الفيديو مع الرسمة في صورة واحدة
+        // إنشاء كانفاس مؤقت بحجم الفيديو الأصلي
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = video.videoWidth;
         tempCanvas.height = video.videoHeight;
         const tempCtx = tempCanvas.getContext('2d');
         
-        // رسم الفيديو الأول
+        // 1️⃣ رسم فريم الفيديو (الخلفية)
         tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-        // رسم الشخبطة فوقه (مع مراعاة فرق الحجم)
+
+        // 2️⃣ رسم الشخبطة فوق الفيديو (الطبقة العلوية)
+        // ⚠️ السر هنا: بنقوله خد رسمة الكانفاس ومطها لتملأ حجم الفيديو
         tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
         
-        // تحويل لـ Base64
-        const imageData = tempCanvas.toDataURL('image/jpeg', 0.6); // جودة متوسطة للتخفيف
+        // تحويل لـ Base64 (صورة)
+        const imageData = tempCanvas.toDataURL('image/jpeg', 0.6); 
 
         // إضافة للقائمة
         feedbackArray.push({
@@ -294,7 +297,11 @@
 
         // تحديث الواجهة
         updateFeedbackList();
-        cancelEditing(); // رجوع للوضع الطبيعي
+        
+        // مسح الرسمة والعودة
+        cancelEditing(); 
+    }
+    
     }function cancelEditing() {
         isEditing = false;
         canvas.style.pointerEvents = 'none';
