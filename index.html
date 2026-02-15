@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-   <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
 <script>
-  // بدء أداة الفحص فوراً
-  var vConsole = new window.vConsole();
+  // استدعاء الأداة بعد ما الصفحة تحمل بالكامل
+  window.onload = function() {
+    window.vConsole = new window.vConsole();
+    console.log("vConsole is ready!");
+  };
 </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
