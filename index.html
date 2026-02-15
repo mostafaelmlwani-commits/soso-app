@@ -156,9 +156,12 @@
     let isEditing = false;
     let feedbackArray = [];
     let currentColor = '#ff4d4d';
-
-    // 1. تحميل الفيديو
+// 1. تحميل الفيديو
     if (videoUrl) {
+        // 🛑 السطر ده هو "تصريح الدخول" اللي كان ناقص
+        // لازم يتكتب قبل الـ src عشان المتصفح يطلب إذن الـ CORS
+        video.crossOrigin = "anonymous"; 
+        
         video.src = decodeURIComponent(videoUrl);
         video.load();
     } else {
