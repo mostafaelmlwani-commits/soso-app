@@ -146,24 +146,36 @@
     // ============================================
     // 1. تحميل الفيديو (أقوى نسخة - ضد الآيفون)
     // ============================================
-    if (videoUrl) {
+   if (videoUrl) {
         let finalUrl = decodeURIComponent(videoUrl);
 
-        // 🚨 إجبار HTTPS: الآيفون جوه تليجرام بيرفض الـ HTTP
+        // 1. إجبار HTTPS
         if (finalUrl.startsWith("http://")) {
             finalUrl = finalUrl.replace("http://", "https://");
         }
 
-        // 🚨 إزالة القيود تماماً عشان يشتغل وميعملش شاشة سوداء
-        video.removeAttribute("crossOrigin"); 
+        // 2. 🚨 الحركة الصايعة: تحويل الرابط للنسخة النضيفة تلقائياً
+        // لو الرابط جواه "telegram-files/توكن/videos/" هنبدله بـ "video/"
+        if (finalUrl.includes("telegram-files")) {
+            // بنشيل كل العك اللي بين كلمة telegram-files وكلمة videos
+            // عشان يرجع اللينك: https://files.royamedia.com/video/file_13.MP4
+            const regex = /telegram-files\/.*\/videos\//;
+            finalUrl = finalUrl.replace(regex, "video/");
+        }
+
+        console.log("Loading Video From:", finalUrl); // عشان تشوفه في الـ Debugger
+        
+        // 3. 🚨 إعدادات الآيفون (iOS 18)
+        // ساعات شيل crossorigin بيعمل مشاكل وساعات حطه بيحلها
+        // هنجرب نخليه موجود بس "anonymous" عشان الـ CORS اللي عملناه في Nginx
+        video.setAttribute("crossorigin", "anonymous");
         
         video.src = finalUrl;
         video.load();
 
-        // لو حصل خطأ، نبهنا
         video.onerror = function() {
-           // ممكن تحط Alert هنا لو حابب، بس الأفضل نسيبه يحاول بصمت
-           console.log("Video Error:", video.error);
+            // 🚨 لو باظ، طلع تنبيه بالرابط اللي فشل عشان نعرف هو راح فين
+            alert("❌ فشل التحميل من الرابط:\n" + video.src + "\nCode: " + (video.error ? video.error.code : "N/A"));
         };
     } else {
         alert("❌ خطأ: رابط الفيديو مش موجود!");
