@@ -159,17 +159,42 @@
 // 1. تحميل الفيديو
   // 1. تحميل الفيديو بنسخة "فريش"
 // 1. تحميل الفيديو بنسخة "فريش"
-    if (videoUrl) {
-        video.crossOrigin = "anonymous"; 
-        
-        // 👇 التعديل هنا: بنضيف علامة استفهام ورقم عشوائي عشان تليجرام يفتكره فيديو جديد
-        const freshUrl = decodeURIComponent(videoUrl) + '?nocache=' + Math.random();
-        
-        video.src = freshUrl;
-        video.load();
+// 1. تحميل الفيديو بطريقة الـ Blob (لضمان تجاوز كاش تليجرام و CORS)
+    async function loadVideoStrictly(url) {
+        try {
+            console.log("🔄 جاري تحميل الفيديو بطريقة Blob...");
+            video.pause();
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                mode: 'cors', 
+                cache: 'no-store'
+            });
+
+            if (!response.ok) throw new Error("فشل تحميل الفيديو من السيرفر");
+
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            
+            video.crossOrigin = "anonymous";
+            video.src = blobUrl;
+            video.load();
+            console.log("✅ فيديو Blob جاهز ومؤمن!");
+        } catch (err) {
+            console.error("❌ فشل تحميل الفيديو بطريقة Blob، جاري استخدام الطريقة العادية:", err);
+            // خطة بديلة لو الـ Blob فشل (لأي سبب تقني في المتصفح)
+            video.crossOrigin = "anonymous";
+            video.src = url + '?v=' + Math.random();
+            video.load();
+        }
     }
+
+    // تشغيل الدالة
+    if (videoUrl) {
+        const decodedUrl = decodeURIComponent(videoUrl);
+        loadVideoStrictly(decodedUrl);
     } else {
-        alert("❌ خطأ: مفيش فيديو!");
+        alert("❌ خطأ: رابط الفيديو مش موجود!");
     }
 
     // 2. ضبط حجم الكانفاس مع الفيديو
