@@ -160,39 +160,18 @@
   // 1. تحميل الفيديو بنسخة "فريش"
 // 1. تحميل الفيديو بنسخة "فريش"
 // 1. تحميل الفيديو بطريقة الـ Blob (لضمان تجاوز كاش تليجرام و CORS)
-    async function loadVideoStrictly(url) {
-        try {
-            console.log("🔄 جاري تحميل الفيديو بطريقة Blob...");
-            video.pause();
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                mode: 'cors', 
-                cache: 'no-store'
-            });
-
-            if (!response.ok) throw new Error("فشل تحميل الفيديو من السيرفر");
-
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            
-            video.crossOrigin = "anonymous";
-            video.src = blobUrl;
-            video.load();
-            console.log("✅ فيديو Blob جاهز ومؤمن!");
-        } catch (err) {
-            console.error("❌ فشل تحميل الفيديو بطريقة Blob، جاري استخدام الطريقة العادية:", err);
-            // خطة بديلة لو الـ Blob فشل (لأي سبب تقني في المتصفح)
-            video.crossOrigin = "anonymous";
-            video.src = url + '?v=' + Math.random();
-            video.load();
-        }
-    }
-
-    // تشغيل الدالة
+   // 1. تحميل الفيديو (العودة للأصل البسيط)
     if (videoUrl) {
         const decodedUrl = decodeURIComponent(videoUrl);
-        loadVideoStrictly(decodedUrl);
+        
+        // التصريح ده مهم فقط عشان المتصفح ميرفضش "رسم" الفريم
+        video.crossOrigin = "anonymous"; 
+        
+        // بنحط الرابط العادي خالص
+        video.src = decodedUrl;
+        video.load();
+        
+        console.log("🎬 تم تحميل الفيديو بالطريقة العادية");
     } else {
         alert("❌ خطأ: رابط الفيديو مش موجود!");
     }
@@ -300,40 +279,29 @@
     // 5. حفظ التعديل (دمج الصورة + النص)
    // 5. حفظ التعديل (دمج الصورة + النص) - النسخة المدمجة
    
-    function saveFeedback() {
+  function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
         
-        // إنشاء كانفاس مؤقت
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = video.videoWidth || canvas.width; // احتياطي لو الفيديو مش قاري
-        tempCanvas.height = video.videoHeight || canvas.height;
+        tempCanvas.width = video.videoWidth || 1280; 
+        tempCanvas.height = video.videoHeight || 720;
         const tempCtx = tempCanvas.getContext('2d');
         
         let imageData;
-
         try {
-            // 1️⃣ محاولة رسم الفيديو (الخطر كله هنا)
-            // لازم السطر ده يكون في try عشان لو CORS ضرب ميموتش التطبيق
+            // بنجرب نرسم الفيديو + الرسمة
             tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-            
-            // 2️⃣ رسم الشخبطة فوقه
             tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-            
-            // محاولة التحويل لصورة
-            imageData = tempCanvas.toDataURL('image/jpeg', 0.6);
-            
+            imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
         } catch (e) {
-            console.warn("⚠️ مشكلة CORS في دمج الفيديو، سيتم إرسال الرسم فقط.", e);
-            
-            // خطة بديلة: لو فشل الدمج، ابعت الرسمة بس (خلفية شفافة)
-            // هننظف الكانفاس ونحط الرسمة بس
-            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            // لو المتصفح رفض يدمج الفيديو (بسبب الـ CORS)، ارسم الشخبطة بس على خلفية سوداء
+            tempCtx.fillStyle = "black";
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-            imageData = tempCanvas.toDataURL('image/png'); // PNG عشان الشفافية
+            imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
         }
 
-        // إضافة للقائمة
         feedbackArray.push({
             time: timestamp,
             rawTime: video.currentTime,
@@ -341,12 +309,10 @@
             image: imageData
         });
 
-        // تحديث الواجهة
         updateFeedbackList();
-        
-        // مسح الرسمة والعودة
         cancelEditing();
     }
+    
     }function cancelEditing() {
         isEditing = false;
         canvas.style.pointerEvents = 'none';
