@@ -203,30 +203,50 @@
         saveBtn.onclick = () => document.getElementById('noteModal').style.display = 'flex';
         document.querySelector('.controls-area').appendChild(saveBtn);
     }
-
-    // 4. منطق الرسم (يدعم الموبايل والماوس)
+// 4. منطق الرسم المعدل (مع معادلة التكبير Scaling)
     let painting = false;
+
+    // دالة لحساب نسبة فرق الحجم بين الشاشة والفيديو
+    function getScale() {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: canvas.width / rect.width,   // نسبة العرض
+            y: canvas.height / rect.height  // نسبة الطول
+        };
+    }
 
     function startPosition(e) {
         painting = true;
         draw(e);
     }
+
     function endPosition() {
         painting = false;
-        ctx.beginPath();
+        ctx.beginPath(); // عشان الخط ميوصلش ببعضه لما تشيل صباعك
     }
+
     function draw(e) {
         if (!painting) return;
-        e.preventDefault(); // منع السكرول أثناء الرسم
+        
+        // لو الحدث لمس، نمنع السكرول عشان الصفحة متتحركش وأنت بترسم
+        if(e.type.includes('touch')) {
+            e.preventDefault();
+        }
 
         const rect = canvas.getBoundingClientRect();
+        const scale = getScale(); // 👇 هنا السحر كله
+
+        // توحيد إحداثيات اللمس والماوس
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
+        // حساب المكان الحقيقي بناءً على حجم الفيديو الأصلي
+        // بنضرب مكان صباعك × نسبة التكبير
+        const x = (clientX - rect.left) * scale.x;
+        const y = (clientY - rect.top) * scale.y;
 
-        ctx.lineWidth = 4;
+        // تكبير سمك القلم هو كمان عشان يبان في الفيديوهات الـ 4K
+        ctx.lineWidth = 5 * scale.x; 
         ctx.lineCap = 'round';
         ctx.strokeStyle = currentColor;
 
@@ -236,14 +256,15 @@
         ctx.moveTo(x, y);
     }
 
-    // ربط الأحداث
+    // ربط الأحداث (زي ما هي)
     canvas.addEventListener('mousedown', startPosition);
     canvas.addEventListener('mouseup', endPosition);
     canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('touchstart', startPosition);
+    
+    // أحداث اللمس (Touch Events) للموبايل
+    canvas.addEventListener('touchstart', startPosition, {passive: false});
     canvas.addEventListener('touchend', endPosition);
-    canvas.addEventListener('touchmove', draw);
-
+    canvas.addEventListener('touchmove', draw, {passive: false});
     // 5. حفظ التعديل (دمج الصورة + النص)
     function saveFeedback() {
         const note = document.getElementById('noteInput').value;
