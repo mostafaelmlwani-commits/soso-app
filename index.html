@@ -1,14 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-    <script>
-        // التنبيه ده هيعرفنا إن النسخة الجديدة وصلت
-        alert("النسخة الجديدة شغال يا هندسة!"); 
-        
-        // تشغيل الكونسول
-        window.vConsole = new window.vConsole();
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Soso Studio Review</title>
@@ -146,25 +138,45 @@
     const video = document.getElementById('videoPlayer');
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
-    const wrapper = document.getElementById('videoWrapper');
     
     let isEditing = false;
     let feedbackArray = [];
     let currentColor = '#ff4d4d';
 
-// 1. تحميل الفيديو (النسخة اللي هتسمح بالتصوير)
-// 1. تحميل الفيديو (النسخة اللي هتسمح بالتصوير)
-    if (videoUrl) {
-        // 1️⃣ التصريح ده هو "المفتاح" اللي بيخلينا ندمج الفيديو مع الرسم
-        video.crossOrigin = "anonymous"; 
+    // ============================================
+    // 1. تحميل الفيديو (أقوى نسخة - ضد الآيفون)
+    // ============================================
+   if (videoUrl) {
+        let finalUrl = decodeURIComponent(videoUrl);
+
+        // 1. إجبار HTTPS
+        if (finalUrl.startsWith("http://")) {
+            finalUrl = finalUrl.replace("http://", "https://");
+        }
+
+        // 2. 🚨 الحركة الصايعة: تحويل الرابط للنسخة النضيفة تلقائياً
+        // لو الرابط جواه "telegram-files/توكن/videos/" هنبدله بـ "video/"
+        if (finalUrl.includes("telegram-files")) {
+            // بنشيل كل العك اللي بين كلمة telegram-files وكلمة videos
+            // عشان يرجع اللينك: https://files.royamedia.com/video/file_13.MP4
+            const regex = /telegram-files\/.*\/videos\//;
+            finalUrl = finalUrl.replace(regex, "video/");
+        }
+
+        console.log("Loading Video From:", finalUrl); // عشان تشوفه في الـ Debugger
         
-        // 2️⃣ بنزود التوقيت عشان نكسر كاش تليجرام ونخليه يطلب التصريح فريش
-        const finalUrl = decodeURIComponent(videoUrl) + '?cv=' + Date.now();
+        // 3. 🚨 إعدادات الآيفون (iOS 18)
+        // ساعات شيل crossorigin بيعمل مشاكل وساعات حطه بيحلها
+        // هنجرب نخليه موجود بس "anonymous" عشان الـ CORS اللي عملناه في Nginx
+        video.setAttribute("crossorigin", "anonymous");
         
         video.src = finalUrl;
         video.load();
-        
-        console.log("🚀 تم تحميل الفيديو بتصريح CORS وكاسر الكاش");
+
+        video.onerror = function() {
+            // 🚨 لو باظ، طلع تنبيه بالرابط اللي فشل عشان نعرف هو راح فين
+            alert("❌ فشل التحميل من الرابط:\n" + video.src + "\nCode: " + (video.error ? video.error.code : "N/A"));
+        };
     } else {
         alert("❌ خطأ: رابط الفيديو مش موجود!");
     }
@@ -249,33 +261,25 @@
     canvas.addEventListener('touchend', endPosition);
     canvas.addEventListener('touchmove', draw, {passive: false});
 
-    // 5. حفظ التعديل (النسخة اللي مش بتهنج)
-   function saveFeedback() {
+    // 5. حفظ التعديل (النسخة الآمنة: خلفية سوداء + شخبطة)
+    function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
         
         const tempCanvas = document.createElement('canvas');
-        // بنستخدم أبعاد الفيديو الحقيقية عشان الصورة تطلع واضحة
-        tempCanvas.width = video.videoWidth || canvas.width;
-        tempCanvas.height = video.videoHeight || canvas.height;
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
         
-        try {
-            // 1️⃣ رسم فريم الفيديو (الخلفية)
-            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-            
-            // 2️⃣ رسم الشخبطة فوقه
-            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-            
-            imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
-        } catch (e) {
-            console.error("CORS Error: المتصفح رفض دمج الفيديو");
-            // لو فشل، يرجع للخطة البديلة (خلفية سوداء + الرسمة) عشان التطبيق ما يقفش
-            tempCtx.fillStyle = "black";
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-            imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
-        }
+        // ⬛ نرسم خلفية سودة (عشان ممنوع نرسم الفيديو بدون CORS)
+        tempCtx.fillStyle = "black";
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // ✏️ نرسم الشخبطة فوق السواد
+        tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // حفظ الصورة
+        const imageData = tempCanvas.toDataURL('image/jpeg', 0.6);
 
         feedbackArray.push({
             time: timestamp,
