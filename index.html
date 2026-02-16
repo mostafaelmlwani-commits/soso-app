@@ -173,7 +173,7 @@
         console.log("🚀 Playing URL:", finalUrl);
         
         // إعدادات الفيديو للآيفون
-        video.setAttribute("crossorigin", "anonymous");
+        video.removeAttribute("crossorigin");
         video.setAttribute("playsinline", "");
         video.setAttribute("webkit-playsinline", "");
         
