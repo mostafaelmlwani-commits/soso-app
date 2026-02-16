@@ -90,7 +90,7 @@
 <body>
 
     <div class="video-wrapper" id="videoWrapper">
-        <video id="videoPlayer" controls playsinline webkit-playsinline>
+        <video id="videoPlayer" controls playsinline webkit-playsinline preload="auto">
             <source src="" type="video/mp4">
         </video>
         <canvas id="drawingCanvas"></canvas>
@@ -131,9 +131,19 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
     
+    // ============================================
+    // 1. استقبال ومعالجة الرابط (الجزء الجديد المصحح)
+    // ============================================
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('projectId');
-    const videoUrl = urlParams.get('video');
+    
+    // بندور على الرابط في كل مكان ممكن
+    let rawUrl = urlParams.get('video') || urlParams.get('file') || urlParams.get('url');
+
+    // لو ملقاش في الرابط، يشوف لو مبعوت في Start Payload
+    if (!rawUrl && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+        rawUrl = tg.initDataUnsafe.start_param;
+    }
     
     const video = document.getElementById('videoPlayer');
     const canvas = document.getElementById('drawingCanvas');
@@ -143,45 +153,44 @@
     let feedbackArray = [];
     let currentColor = '#ff4d4d';
 
-    // ============================================
-    // 1. تحميل الفيديو (أقوى نسخة - ضد الآيفون)
-    // ============================================
-   if (videoUrl) {
-        let finalUrl = decodeURIComponent(videoUrl);
+   if (rawUrl) {
+        let finalUrl = decodeURIComponent(rawUrl);
 
-        // 1. إجبار HTTPS
-        if (finalUrl.startsWith("http://")) {
+        // تنظيف الرابط من التوكن واستبداله بالمسار الجديد
+        if (finalUrl.includes("telegram-files")) {
+            console.log("Cleaning URL:", finalUrl);
+            finalUrl = finalUrl.replace(/telegram-files\/.*\/videos\//, "video/");
+            
+            // التأكد من الدومين
+            if (!finalUrl.startsWith("http")) {
+                if (!finalUrl.startsWith("/")) finalUrl = "/" + finalUrl;
+                finalUrl = "https://files.royamedia.com" + finalUrl;
+            }
+        } else if (finalUrl.startsWith("http://")) {
             finalUrl = finalUrl.replace("http://", "https://");
         }
 
-        // 2. 🚨 الحركة الصايعة: تحويل الرابط للنسخة النضيفة تلقائياً
-        // لو الرابط جواه "telegram-files/توكن/videos/" هنبدله بـ "video/"
-        if (finalUrl.includes("telegram-files")) {
-            // بنشيل كل العك اللي بين كلمة telegram-files وكلمة videos
-            // عشان يرجع اللينك: https://files.royamedia.com/video/file_13.MP4
-            const regex = /telegram-files\/.*\/videos\//;
-            finalUrl = finalUrl.replace(regex, "video/");
-        }
-
-        console.log("Loading Video From:", finalUrl); // عشان تشوفه في الـ Debugger
+        console.log("🚀 Playing URL:", finalUrl);
         
-        // 3. 🚨 إعدادات الآيفون (iOS 18)
-        // ساعات شيل crossorigin بيعمل مشاكل وساعات حطه بيحلها
-        // هنجرب نخليه موجود بس "anonymous" عشان الـ CORS اللي عملناه في Nginx
+        // إعدادات الفيديو للآيفون
         video.setAttribute("crossorigin", "anonymous");
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
         
         video.src = finalUrl;
         video.load();
 
         video.onerror = function() {
-            // 🚨 لو باظ، طلع تنبيه بالرابط اللي فشل عشان نعرف هو راح فين
-            alert("❌ فشل التحميل من الرابط:\n" + video.src + "\nCode: " + (video.error ? video.error.code : "N/A"));
+            alert("❌ خطأ تشغيل:\n" + video.src + "\nCode: " + (video.error ? video.error.code : "N/A"));
         };
     } else {
-        alert("❌ خطأ: رابط الفيديو مش موجود!");
+        alert("⚠️ خطأ: لم يتم العثور على رابط الفيديو!\nParams: " + window.location.search);
     }
 
-    // 2. ضبط حجم الكانفاس
+    // ============================================
+    // باقي الكود زي ما هو (الرسم والكانفاس)
+    // ============================================
+
     function resizeCanvas() {
         canvas.width = video.clientWidth;
         canvas.height = video.clientHeight;
@@ -189,7 +198,6 @@
     video.addEventListener('loadedmetadata', resizeCanvas);
     window.addEventListener('resize', resizeCanvas);
 
-    // 3. بدء التعديل
     function startEditing() {
         isEditing = true;
         video.pause();
@@ -210,7 +218,6 @@
         document.querySelector('.controls-area').appendChild(saveBtn);
     }
 
-    // 4. منطق الرسم (بالمعادلة اللي بتظبط المكان)
     let painting = false;
 
     function getScale() {
@@ -261,7 +268,6 @@
     canvas.addEventListener('touchend', endPosition);
     canvas.addEventListener('touchmove', draw, {passive: false});
 
-    // 5. حفظ التعديل (النسخة الآمنة: خلفية سوداء + شخبطة)
     function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
@@ -271,14 +277,10 @@
         tempCanvas.height = canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
         
-        // ⬛ نرسم خلفية سودة (عشان ممنوع نرسم الفيديو بدون CORS)
         tempCtx.fillStyle = "black";
         tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // ✏️ نرسم الشخبطة فوق السواد
         tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
         
-        // حفظ الصورة
         const imageData = tempCanvas.toDataURL('image/jpeg', 0.6);
 
         feedbackArray.push({
