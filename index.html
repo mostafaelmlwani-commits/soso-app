@@ -131,9 +131,26 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
     
-    const urlParams = new URLSearchParams(window.location.search);
+   const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('projectId');
-    const videoUrl = urlParams.get('video') || urlParams.get('file'); // support both
+    
+    // --- 🟢 بداية التعديل: حل مشكلة الأندرويد (Start Param) ---
+    let videoUrl = urlParams.get('video') || urlParams.get('file');
+
+    // لو ملقناش الرابط في العنوان المباشر، ندور في باراميترات تليجرام المخفية
+    if (!videoUrl && window.Telegram && window.Telegram.WebApp) {
+        const initData = window.Telegram.WebApp.initDataUnsafe;
+        if (initData && initData.start_param) {
+            // فك التشفير لأن تليجرام بيبعتها مشفرة
+            videoUrl = decodeURIComponent(initData.start_param);
+        }
+    }
+
+    // تنظيف الرابط لو وصل كنص "undefined"
+    if (videoUrl === "undefined" || videoUrl === "null") {
+        videoUrl = null;
+    }
+    // --- 🔴 نهاية التعديل ---
     
     const video = document.getElementById('videoPlayer');
     const canvas = document.getElementById('drawingCanvas');
