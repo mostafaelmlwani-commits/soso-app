@@ -90,9 +90,16 @@
 <body>
 
     <div class="video-wrapper" id="videoWrapper">
-        <video id="videoPlayer" controls playsinline webkit-playsinline>
-            <source src="" type="video/mp4">
-        </video>
+       <video id="videoPlayer" 
+           width="100%" 
+           height="auto"
+           controls 
+           playsinline 
+           webkit-playsinline 
+           preload="metadata"
+           crossorigin="anonymous">
+           <source src="" type="video/mp4">
+       </video>
         <canvas id="drawingCanvas"></canvas>
         
         <div class="drawing-tools" id="drawingTools">
@@ -131,26 +138,21 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
     
-   const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('projectId');
     
-    // --- 🟢 بداية التعديل: حل مشكلة الأندرويد (Start Param) ---
     let videoUrl = urlParams.get('video') || urlParams.get('file');
 
-    // لو ملقناش الرابط في العنوان المباشر، ندور في باراميترات تليجرام المخفية
     if (!videoUrl && window.Telegram && window.Telegram.WebApp) {
         const initData = window.Telegram.WebApp.initDataUnsafe;
         if (initData && initData.start_param) {
-            // فك التشفير لأن تليجرام بيبعتها مشفرة
             videoUrl = decodeURIComponent(initData.start_param);
         }
     }
 
-    // تنظيف الرابط لو وصل كنص "undefined"
     if (videoUrl === "undefined" || videoUrl === "null") {
         videoUrl = null;
     }
-    // --- 🔴 نهاية التعديل ---
     
     const video = document.getElementById('videoPlayer');
     const canvas = document.getElementById('drawingCanvas');
@@ -163,14 +165,13 @@
     // ============================================
     // 1. تحميل الفيديو
     // ============================================
-   if (videoUrl) {
+    if (videoUrl) {
         let finalUrl = decodeURIComponent(videoUrl);
 
         if (finalUrl.startsWith("http://")) {
             finalUrl = finalUrl.replace("http://", "https://");
         }
 
-        // تنظيف الرابط
         if (finalUrl.includes("telegram-files")) {
             const regex = /telegram-files\/.*\/videos\//;
             finalUrl = finalUrl.replace(regex, "video/");
@@ -178,8 +179,7 @@
 
         console.log("Loading Video From:", finalUrl);
         
-        // 🚨 دي لازم تكون موجودة عشان نعرف نلقط صورة من الفيديو
-        video.setAttribute("crossorigin", "anonymous");
+        // ❌ تم حذف السطر الزيادة من هنا عشان ميعملش مشاكل
         
         video.src = finalUrl;
         video.load();
@@ -271,22 +271,22 @@
     canvas.addEventListener('touchend', endPosition);
     canvas.addEventListener('touchmove', draw, {passive: false});
 
-    // 5. حفظ التعديل (تصحيح الشاشة السوداء)
+    // 5. حفظ التعديل (تصحيح الشاشة السوداء + حماية من الكراش)
     function saveFeedback() {
         const note = document.getElementById('noteInput').value;
         const timestamp = formatTime(video.currentTime);
         
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+        tempCanvas.width = video.videoWidth || 640;
+        tempCanvas.height = video.videoHeight || 360;
         const tempCtx = tempCanvas.getContext('2d');
         
         try {
-            // 🚨 هنا التصحيح: ارسم الفيديو الأول، وبعدين الشخبطة
             tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
             tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
             
-            const imageData = tempCanvas.toDataURL('image/jpeg', 0.6);
+            // جودة متوسطة (0.5) عشان السرعة
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.5);
 
             feedbackArray.push({
                 time: timestamp,
@@ -297,9 +297,21 @@
 
             updateFeedbackList();
             cancelEditing();
+            document.getElementById('noteModal').style.display = 'none';
+
         } catch (e) {
-            alert("⚠️ فشل التقاط الصورة من الفيديو بسبب قيود الأمان (CORS).\nتأكد إن السيرفر بيبعت Headers صح.");
-            console.error(e);
+            console.error("CORS Error capturing video frame:", e);
+            // لو فشل التصوير، نبعت صورة فاضية عشان التطبيق يكمل وميوقفش
+             feedbackArray.push({
+                time: timestamp,
+                rawTime: video.currentTime,
+                note: note,
+                image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" 
+            });
+            updateFeedbackList();
+            cancelEditing();
+            document.getElementById('noteModal').style.display = 'none';
+            alert("⚠️ تم حفظ الملاحظة (بدون صورة) بسبب قيود المتصفح.");
         }
     }
 
