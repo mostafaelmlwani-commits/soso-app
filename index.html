@@ -137,6 +137,10 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
+
+// 👇👇 ضيف السطر ده فوراً (الجاسوس) 👇👇
+    // هيظهر رسالة فيها الرابط كامل أول ما يفتح
+    alert("الرابط اللي وصلني:\n" + window.location.href);
     
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('projectId');
