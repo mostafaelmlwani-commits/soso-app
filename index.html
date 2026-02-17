@@ -145,7 +145,14 @@
     // let videoUrl = urlParams.get('video') || urlParams.get('file');
 
     // 👇👇 وكتبنا الرابط بإيدنا عشان نجبره يشتغل عند صاحبك 👇👇
-    let videoUrl = "https://files.royamedia.com/video/file_2.mp4"; 
+    let videoUrl = urlParams.get('video') || urlParams.get('file');
+
+if (!videoUrl && window.Telegram && window.Telegram.WebApp) {
+    const initData = window.Telegram.WebApp.initDataUnsafe;
+    if (initData && initData.start_param) {
+        videoUrl = decodeURIComponent(initData.start_param);
+    }
+}
 
     // كمل باقي الكود زي ما هو تحت عادي جداً...
     // ...
